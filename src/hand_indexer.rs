@@ -1,15 +1,10 @@
+use std::f64;
 
 use crate::constants::{
-    SUITS,
-    MAX_ROUNDS,
-    CARDS,
-    ROUND_SHIFT,
-    ROUND_MASK,
-    RANKS,
-
-    NCR_RANKS,
-    NCR_GROUPS
+    CARDS, INDEX_TO_RANK_SET, MAX_ROUNDS, NCR_GROUPS, NCR_RANKS, NTH_UNSET, RANKS, RANK_SET_TO_INDEX, ROUND_MASK, ROUND_SHIFT, SUITS, SUIT_PERMUTATIONS
 };
+use crate::deck::{deck_get_rank, deck_get_suit, Card, deck_make_card};
+use crate::hand_indexer_state::HandIndexerState;
 
 #[derive(PartialEq, Clone, Copy)]
 enum Action {
@@ -87,6 +82,17 @@ impl HandIndexer {
 
         // Tabulate configurations
         indexer.enumerate_configurations(Action::TabulateConfigurations);
+
+        for i in 0..rounds {
+            let mut accum = 0usize;
+            for j in 0..indexer.configurations[i] {
+                let next = accum + indexer.configuration_to_offset[i][j];
+                indexer.configuration_to_offset[i][j] = accum;
+                accum = next;
+            }
+
+            indexer.round_size[i] = accum;
+        }
 
         // Count permutations
         indexer.enumerate_configurations(Action::CountPermutations);
@@ -300,12 +306,280 @@ impl HandIndexer {
         }
     }
 
+    pub fn hand_index_next_round(&self, cards: &[u8], state: &mut HandIndexerState) -> usize {
+        if state.round >= self.rounds {
+            panic!("hand_index_next_round: state.round >= self.rounds");
+        }
+
+        let round = state.round;
+        state.round += 1;
+
+        let mut ranks = [0; SUITS];
+        let mut shifted_ranks = [0; SUITS];
+
+        
+        for &card in &cards[..self.cards_per_round[round] as usize] {
+            let rank = deck_get_rank(card as Card) as usize;
+            let suit = deck_get_suit(card as Card) as usize;
+            let rank_bit = 1 << rank;
+
+            if card as usize >= CARDS || ranks[suit] & rank_bit != 0 {
+                panic!("hand_index_next_round: Invalid card or duplicate card found");
+            }
+
+            ranks[suit] |= rank_bit;
+            let used_ranks_before = (ranks[suit] as u32).count_ones() - 1;
+            shifted_ranks[suit] |= 1 << used_ranks_before;
+        }
+
+        for i in 0..SUITS {
+            if state.used_ranks[i] & ranks[i] != 0 {
+                panic!("hand_index_next_round: Duplicate card found");
+            }
+
+            let used_size = state.used_ranks[i].count_ones() as usize;
+            let this_size = ranks[i].count_ones() as usize;
+
+            let ncr_ranks_guard = NCR_RANKS.lock().unwrap(); // Lock NCR_RANKS for safe access
+
+            state.suit_index[i] += state.suit_multiplier[i] * RANK_SET_TO_INDEX[shifted_ranks[i] as usize] as usize;
+            state.suit_multiplier[i] *= ncr_ranks_guard[RANKS - used_size][this_size] as usize;
+            state.used_ranks[i] |= ranks[i];
+        }
+
+        let mut permutation_index = 0;
+        let mut permutation_multiplier = 1;
+        let mut remaining = self.cards_per_round[round] as usize;
+
+        for i in 0..SUITS-1 {
+            let this_size = ranks[i].count_ones() as usize;
+            permutation_index += permutation_multiplier * this_size;
+            permutation_multiplier *= remaining + 1;
+            remaining -= this_size;
+        }
+
+        let configuration = self.permutation_to_configuration[round][permutation_index];
+        let pi_index = self.permutation_to_pi[round][permutation_index];
+        let equal_index = self.configuration_to_equal[round][configuration];
+        let offset = self.configuration_to_offset[round][configuration];
+
+        // SORTING
+
+        // Apply permutation indicated by pi_index
+        let suit_permutations = SUIT_PERMUTATIONS.lock().unwrap();
+        let pi = &suit_permutations[pi_index]; // This assumes suit_permutations is accessible
+
+        let mut suit_index = [0; SUITS];
+        let mut suit_multiplier = [0; SUITS];
+
+        for i in 0..SUITS {
+            suit_index[i] = state.suit_index[pi[i] as usize];
+            suit_multiplier[i] = state.suit_multiplier[pi[i] as usize];
+        }
+
+        // Swapping function tailored for Rust's borrowing and ownership rules
+        fn swap(suit_index: &mut [usize], suit_multiplier: &mut [usize], u: usize, v: usize) {
+            suit_index.swap(u, v);
+            suit_multiplier.swap(u, v);
+        }
+
+        // Access NCR_GROUPS safely
+        let ncr_groups = NCR_GROUPS.lock().unwrap();
+
+        // Perform the swaps according to the sorting network logic from the C implementation
+        let mut suit_index: [usize; SUITS] = [0; SUITS];
+        let mut suit_multiplier: [usize; SUITS] = [0; SUITS];
+        for i in 0..SUITS {
+            suit_index[i] = state.suit_index[pi[i] as usize];
+            suit_multiplier[i] = state.suit_multiplier[pi[i] as usize];
+        }
+
+        // Perform swaps based on equal groups. This logic assumes SUITS = 4 for simplicity.
+        if SUITS > 1 && (equal_index & 1) != 0 { swap(&mut suit_index, &mut suit_multiplier, 0, 1); }
+        if SUITS > 2 && (equal_index & 2) != 0 { swap(&mut suit_index, &mut suit_multiplier, 1, 2); }
+        if SUITS > 3 && (equal_index & 4) != 0 { swap(&mut suit_index, &mut suit_multiplier, 2, 3); }
+        if SUITS > 1 && (equal_index & 1) != 0 { swap(&mut suit_index, &mut suit_multiplier, 0, 1); } // Re-check the first swap condition
+
+        // Compute the final hand index
+        let mut index = offset as usize; // Ensuring type alignment with usize
+        let mut multiplier = 1usize;
+
+        for mut i in 0..SUITS {
+            let mut part = suit_index[i];
+            let mut size = suit_multiplier[i]; // Placeholder, will be overwritten below if conditions met
+        
+            // Adjust part and size based on equal groups
+            if i + 1 < SUITS && (equal_index >> i) & 1 != 0 {
+                if i + 2 < SUITS && (equal_index >> (i + 1)) & 1 != 0 {
+                    if i + 3 < SUITS && (equal_index >> (i + 2)) & 1 != 0 {
+                        // Four equal suits
+                        size = *ncr_groups.get(suit_multiplier[i] + 3).unwrap().get(4).unwrap() as usize;
+                        part += *ncr_groups.get(suit_index[i + 1] + 1).unwrap().get(2).unwrap() as usize;
+                        part += *ncr_groups.get(suit_index[i + 2] + 2).unwrap().get(3).unwrap() as usize;
+                        part += *ncr_groups.get(suit_index[i + 3] + 3).unwrap().get(4).unwrap() as usize;
+                        i += 3;
+                    } else {
+                        // Three equal suits
+                        size = *ncr_groups.get(suit_multiplier[i] + 2).unwrap().get(3).unwrap() as usize;
+                        part += *ncr_groups.get(suit_index[i + 1] + 1).unwrap().get(2).unwrap() as usize;
+                        part += *ncr_groups.get(suit_index[i + 2] + 2).unwrap().get(3).unwrap() as usize;
+                        i += 2;
+                    }
+                } else {
+                    // Two equal suits
+                    size = *ncr_groups.get(suit_multiplier[i] + 1).unwrap().get(2).unwrap() as usize;
+                    part += *ncr_groups.get(suit_index[i + 1] + 1).unwrap().get(2).unwrap() as usize;
+                    i += 1;
+                }
+            }
+        
+            index += part * multiplier;
+            multiplier *= size;
+        }
+
+        index // Return the final hand index
+    }
+
+    pub fn hand_unindex(&self, round: usize, mut index: usize, cards: &mut [u8]) -> bool {
+        if round >= self.rounds || index >= self.round_size[round] {
+            return false;
+        }
+
+        let ncr_groups = NCR_GROUPS.lock().unwrap();
+        let ncr_ranks = NCR_RANKS.lock().unwrap();
+
+        let mut configuration_idx = 0;
+        let mut low = 0;
+        let mut high = self.configurations[round];
+
+
+        while low < high {
+            let mid = (low + high) / 2;
+            if self.configuration_to_offset[round][mid] <= index {
+                configuration_idx = mid;
+                low = mid + 1;
+            } else {
+                high = mid;
+            }
+        }
+        while low < high {
+            let mid = (low + high) / 2;
+            if self.configuration_to_offset[round][mid] <= index {
+                configuration_idx = mid;
+                low = mid + 1;
+            } else {
+                high = mid;
+            }
+        }
+        index -= self.configuration_to_offset[round][configuration_idx];
+
+
+        let mut suit_index = [0; SUITS];
+
+
+        for i in 0..SUITS {
+            let j = (i + 1..SUITS)
+                .find(|&j| self.configuration[round][configuration_idx][j] != self.configuration[round][configuration_idx][i])
+                .unwrap_or(SUITS);
+
+            let suit_size = self.configuration_to_suit_size[round][configuration_idx][i] as usize;
+            let group_size = ncr_groups[suit_size + j - i - 1][j - i] as usize;
+            let group_index = index % group_size;
+            index /= group_size;
+
+            // Calculate using exp/log
+            for k in i..j {
+                let low = f64::exp(f64::ln(group_index as f64) / (j - i) as f64 - 1.0 + f64::ln((j - i) as f64)) - (j - i) as f64;
+                let high = f64::exp(f64::ln(group_index as f64) / (j - i) as f64 + f64::ln((j - i) as f64)) - (j + i) as f64;
+                
+                let mut low = low.ceil() as usize;
+                let mut high = (high.floor() as usize).min(suit_size);
+
+                while low < high {
+                    let mid = (low + high) / 2;
+                    if ncr_groups[mid + j - i - 1][j - i] <= group_index as u64 {
+                        suit_index[k] = mid;
+                        low = mid + 1;
+                    } else {
+                        high = mid;
+                    }
+                }
+            }
+
+            if i == j - 1 {
+                suit_index[i] = group_index;
+            }
+        }
+
+        // Initialize location with round_start values
+        let mut location = [0usize; MAX_ROUNDS];
+        location[..self.rounds].copy_from_slice(&self.round_start[..self.rounds]);
+
+        for i in 0..SUITS {
+            let mut used = 0u32;
+            let mut m = 0usize;
+
+            for j in 0..self.rounds as usize {
+                let n = (self.configuration[round][configuration_idx][i] >> (ROUND_SHIFT * (self.rounds - j - 1) as u32)) & ROUND_MASK as usize;
+
+                let round_size = ncr_ranks[RANKS - m][n] as usize;
+                m += n;
+
+                let round_index = suit_index[i] % round_size;
+                suit_index[i] /= round_size;
+        
+                let mut shifted_cards = INDEX_TO_RANK_SET[n][round_index]; // Adapt INDEX_TO_RANK_SET access
+                let mut rank_set = 0u32;
+        
+                for k in 0..n {
+                    let shifted_card = 1 << shifted_cards.trailing_zeros(); // This captures the bit position correctly
+                    shifted_cards ^= shifted_card;
+
+                    let card_rank = (31 - shifted_card.leading_zeros()) as u32; // Get the rank from shifted_card
+                    let card = NTH_UNSET[used.count_ones() as usize][card_rank as usize];
+
+                    rank_set |= 1 << card; // Update rank_set with this card
+                    cards[location[j] + k] = deck_make_card(i as Card, card as Card) as u8; // Assign the card to cards array
+
+                }
+                location[j] += n;
+                used |= rank_set;
+
+            }
+        }
+
+
+        true
+    }
+
     pub fn hand_indexer_size(&self, round: usize) -> Option<usize> {
+        println!("{:?}", self.rounds);
         if round < self.rounds {
             Some(self.round_size[round])
         } else {
             None
         }
+    }
+
+    pub fn hand_index_all(&self, cards: &[u8]) -> Vec<usize> {
+        let mut indices = vec![0; self.rounds];
+        let mut state = HandIndexerState::new(); // Replace with the actual state initialization
+
+        for i in 0..self.rounds {
+            let start = self.round_start[i];
+            let end = start + self.cards_per_round[i] as usize;
+            // Make sure to handle potential out-of-bounds here for `cards`
+            if end <= cards.len() {
+                indices[i] = self.hand_index_next_round(&cards[start..end], &mut state);
+            }
+        }
+
+        indices
+    }
+
+    pub fn hand_index_last(&self, cards: &[u8]) -> usize {
+        let indices = self.hand_index_all(cards);
+        *indices.last().unwrap_or(&0) // Safely return the last element or 0 if not present
     }
 }
 

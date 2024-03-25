@@ -59,9 +59,8 @@ lazy_static! {
                 ncr_groups[i][i] = 1;
             }
             for j in 1..=i.min(SUITS) {
-                ncr_groups[i][j] = ncr_groups[i - 1][j - 1] + ncr_groups[i - 1][j]
-                    // Prevent overflow warning in debug mode. But in reality we never get this.
-                    .wrapping_add(ncr_groups[i - 1][j]);
+                // wrapping_add to prevent overflow warning in debug mode. But in reality we never get this.
+                ncr_groups[i][j] = ncr_groups[i - 1][j - 1].wrapping_add(ncr_groups[i - 1][j]);
             }
         }
         ncr_groups

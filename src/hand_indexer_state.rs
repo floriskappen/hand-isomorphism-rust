@@ -14,13 +14,13 @@ use crate::constants::{
     SUIT_PERMUTATIONS,
 };
 
-struct HandIndexerState {
-    suit_index: [usize; SUITS],
-    suit_multiplier: [usize; SUITS],
-    round: usize,
-    permutation_index: usize,
-    permutation_multiplier: usize,
-    used_ranks: [u32; SUITS],
+pub struct HandIndexerState {
+    pub suit_index: [usize; SUITS],
+    pub suit_multiplier: [usize; SUITS],
+    pub round: usize,
+    pub permutation_index: usize,
+    pub permutation_multiplier: usize,
+    pub used_ranks: [u32; SUITS],
 }
 
 impl HandIndexerState {
