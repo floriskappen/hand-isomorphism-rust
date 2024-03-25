@@ -88,24 +88,10 @@ impl HandIndexer {
         // Tabulate configurations
         indexer.enumerate_configurations(Action::TabulateConfigurations);
 
-        // for i in 0..indexer.configuration_to_offset[2].len() {
-        //     println!("{}", indexer.configuration_to_offset[2][i]);
-        // }
-        println!("Wrong value: {}", indexer.configuration_to_offset[2][13 % MAX_ROUNDS]);
-        // println!("----");
-        // for i in 0..indexer.test_lst[0].len() {
-        //     println!("{}", indexer.test_lst[0][i]);
-        // }
-
-
         for i in 0..rounds {
             let mut accum = 0u64;
             for j in 0..indexer.configurations[i] as usize {
-                // if i == 2 {
-                //     println!("{}", indexer.configuration_to_offset[i][j]);
-                // }
                 let next = accum + indexer.configuration_to_offset[i][j];
-                // println!("NEXT: {}", next);
                 indexer.configuration_to_offset[i][j] = accum;
                 accum = next;
             }
@@ -144,44 +130,34 @@ impl HandIndexer {
         let ncr_groups = NCR_GROUPS.lock().unwrap();
 
         // Increment configurations count for this round and get the current configuration ID
-        let id = self.configurations[round] as usize;
+        let mut id = self.configurations[round] as usize;
         self.configurations[round] += 1;
 
         // Extend vectors to ensure they are large enough to hold the new configuration
         self.configuration[round].resize(id + 1, [0; SUITS]);
         self.configuration_to_suit_size[round].resize(id + 1, [0; SUITS]);
-
-        
         self.configuration_to_offset[round].resize(id + 1, 0);
         self.configuration_to_equal[round].resize(id + 1, 0);
 
         // Insertion sort logic adapted from C
-        let mut current_id = id;
-        while current_id > 0 {
-            let prev_id = current_id - 1;
+        while id > 0 {
+            let prev_id = id - 1;
             if configuration < &self.configuration[round][prev_id] {
                 // Shift configurations one position to make room for the new configuration
-                self.configuration[round][current_id] = self.configuration[round][prev_id];
-                self.configuration_to_suit_size[round][current_id] = self.configuration_to_suit_size[round][prev_id];
-                if round == 2 && self.configuration_to_offset[round].len() > 13 {
-                    println!("ID: {}", id);
-                    println!("??? BEFORE value: {}", self.configuration_to_offset[round][13]);
-                }
-                self.configuration_to_offset[round][current_id] = self.configuration_to_offset[round][prev_id];
-                if round == 2 && self.configuration_to_offset[round].len() > 13 {
-                    println!("??? AFTER value: {}", self.configuration_to_offset[round][13]);
-                }
-                self.configuration_to_equal[round][current_id] = self.configuration_to_equal[round][prev_id];
-                current_id -= 1;
+                self.configuration[round][id] = self.configuration[round][prev_id];
+                self.configuration_to_suit_size[round][id] = self.configuration_to_suit_size[round][prev_id];
+                self.configuration_to_offset[round][id] = self.configuration_to_offset[round][prev_id];
+                self.configuration_to_equal[round][id] = self.configuration_to_equal[round][prev_id];
+                id -= 1;
             } else {
                 break;
             }
         }
 
+
         // Insert the new configuration at the correct position
-        self.configuration[round][current_id] = *configuration;
+        self.configuration[round][id] = *configuration;
         self.configuration_to_offset[round][id] = 1;
-        // println!("ID: {}", id);
 
         // Calculation loop for suit sizes and offsets
         let mut equal: u64 = 0;
@@ -203,24 +179,9 @@ impl HandIndexer {
             for k in i..j {
                 self.configuration_to_suit_size[round][id][k] = size;
             }
-
-            // if round == 2 {
-
-            //     println!("SIZE: {}", size);
-            //     println!("SIZE NCR: {}", ncr_groups[(size as usize) + j - i - 1][j - i]);
-            //     println!("CFG TO: {}", self.configuration_to_offset[round][id]);
-            // }
-
-            
-            
+  
             // Multiply the configuration offset by the number of groups determined by nCr_groups
             self.configuration_to_offset[round][id] *= ncr_groups[(size as usize) + j - i - 1][j - i];
-
-            // if round == 2 {
-
-            //     println!("CFG TO After: {}", self.configuration_to_offset[round][id]);
-            //     println!("");
-            // }
 
             // Set equal bits for suits from i + 1 to j
             for k in i + 1..j {
@@ -231,10 +192,6 @@ impl HandIndexer {
         }
 
         self.configuration_to_equal[round][id] = equal >> 1;
-
-        // if round == 2 {
-        //     self.test_lst[0].push(self.configuration_to_offset[round][id]);
-        // }
 
         if round == 2 && id == 13 {
             println!("Correct value: {}", self.configuration_to_offset[round][id]);
@@ -320,10 +277,6 @@ impl HandIndexer {
             &mut configuration,
             action,
         );
-
-        // if action == Action::TabulateConfigurations {
-        //     println!("Wrong value1: {}", self.configuration_to_offset[2][13]);
-        // }
     }
 
     fn enumerate_configurations_r(
@@ -345,10 +298,6 @@ impl HandIndexer {
                 }
                 Action::TabulateConfigurations => {
                     self.tabulate_configurations(round, configuration);
-                    // if self.configuration_to_offset[2].len() > 13 {
-                    //     println!("{:?}", configuration);
-                    //     println!("Wrong value2: {}", self.configuration_to_offset[2][13]);
-                    // }
                 }
                 Action::CountPermutations => {
                     self.count_permutations(round, configuration);

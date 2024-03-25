@@ -10,9 +10,9 @@ use crate::hand_indexer::HandIndexer;
 
 
 fn main() {
-    let hand_indexer_preflop = HandIndexer::new(3, &[2, 3, 1]).unwrap();
+    let hand_indexer_preflop = HandIndexer::new(4, &[2, 3, 1, 1]).unwrap();
 
-    if let Some(size) = hand_indexer_preflop.hand_indexer_size(2) {
+    if let Some(size) = hand_indexer_preflop.hand_indexer_size(3) {
         println!("Preflop hand indexer size: {}", size);
     }
 }
