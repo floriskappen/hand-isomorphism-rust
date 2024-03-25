@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::Mutex;
 use lazy_static::lazy_static;
 
@@ -36,7 +35,7 @@ lazy_static! {
         }
         equal
     };
-    pub static ref NCR_RANKS: Mutex<Vec<Vec<u32>>> = Mutex::new({
+    pub static ref NCR_RANKS: Mutex<Vec<Vec<u64>>> = Mutex::new({
         let mut ncr_ranks = vec![vec![0; RANKS + 1]; RANKS + 1];
         ncr_ranks[0][0] = 1;
         for i in 1..=RANKS {
@@ -48,6 +47,7 @@ lazy_static! {
         }
         ncr_ranks
     });
+
     pub static ref NCR_GROUPS: Mutex<Vec<Vec<u64>>> = Mutex::new({
         let mut ncr_groups = vec![vec![0u64; SUITS + 1]; MAX_GROUP_INDEX];
         ncr_groups[0][0] = 1;
@@ -65,7 +65,7 @@ lazy_static! {
         }
         ncr_groups
     });
-    pub static ref RANK_SET_TO_INDEX: Vec<u32> = {
+    pub static ref RANK_SET_TO_INDEX: Vec<u64> = {
         let mut rank_set_to_index = vec![0; 1 << RANKS];
         for i in 0..(1 << RANKS) {
             let mut set = i as u32;
