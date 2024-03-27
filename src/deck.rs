@@ -7,14 +7,10 @@ pub type Card = u32;
 // Assuming you would like to convert ranks and suits to characters.
 
 /// Returns the character representation of a card's rank.
-pub fn rank_to_char(rank: Card) -> char {
-    "23456789TJQKA".chars().nth(rank as usize).unwrap_or('?')
-}
+pub const RANK_TO_CHAR: &[char] = &['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
 
 /// Returns the character representation of a card's suit.
-pub fn suit_to_char(suit: Card) -> char {
-    "♠♥♦♣".chars().nth(suit as usize).unwrap_or('?')
-}
+pub const SUIT_TO_CHAR: &[char] = &['s', 'h', 'd', 'c'];
 
 /// Extracts the suit from a card value.
 pub fn deck_get_suit(card: Card) -> Card {
