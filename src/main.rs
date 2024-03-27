@@ -13,7 +13,7 @@ use crate::deck::{RANK_TO_CHAR, SUIT_TO_CHAR, deck_get_suit, deck_get_rank};
 
 fn generate_canonical_hands(indexer: &HandIndexer, round: usize) -> io::Result<()> {
     let size = indexer.hand_indexer_size(round).unwrap() as usize;
-    let mut cards = vec![0u32; 7]; // Adjust the size according to your needs
+    let cards = vec![0u32; 7]; // Adjust the size according to your needs
     let mut total_cards = 0u8;
 
     for i in 0..=round {
@@ -25,8 +25,6 @@ fn generate_canonical_hands(indexer: &HandIndexer, round: usize) -> io::Result<(
 
     // Generate canonical hands
     for i in 0..size {
-        indexer.hand_unindex(round, i as u64, &mut cards);
-        // println!("{:?}", cards[..total_cards as usize].to_vec());
         canonical_hands.push(cards[..total_cards as usize].to_vec());
     }
 
@@ -42,15 +40,15 @@ fn generate_canonical_hands(indexer: &HandIndexer, round: usize) -> io::Result<(
     }
 
     // Print the first 10 canonical hands
-    println!("First 10 canonical hands for round {}:", round);
-    for (i, hand) in canonical_hands.iter().take(10).enumerate() {
-        // print!("Hand {}: ", i);
-        for &card in hand {
-            print!("{} ", card);
-            // print!("{}{} ", RANK_TO_CHAR[deck_get_rank(card) as usize], SUIT_TO_CHAR[deck_get_suit(card) as usize]);
-        }
-        println!();
-    }
+    // println!("First 10 canonical hands for round {}:", round);
+    // for (i, hand) in canonical_hands.iter().take(10).enumerate() {
+    //     // print!("Hand {}: ", i);
+    //     for &card in hand {
+    //         print!("{} ", card);
+    //         // print!("{}{} ", RANK_TO_CHAR[deck_get_rank(card) as usize], SUIT_TO_CHAR[deck_get_suit(card) as usize]);
+    //     }
+    //     println!();
+    // }
 
     println!("Canonical hands!: {}", canonical_hands.len());
 

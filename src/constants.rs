@@ -13,8 +13,8 @@ pub const CARDS: usize = 52; // Assuming a standard deck
 
 // Static data initialization using lazy_static for thread-safe, one-time initialization
 lazy_static! {
-    pub static ref NTH_UNSET: Vec<Vec<u8>> = {
-        let mut nth_unset = vec![vec![0xff; RANKS]; 1 << RANKS];
+    pub static ref NTH_UNSET: [[u8; RANKS]; 1 << RANKS] = {
+        let mut nth_unset = [[0xff; RANKS]; 1 << RANKS];
         for i in 0..(1 << RANKS) {
             let mut set = !i & ((1 << RANKS) - 1);
             for j in 0..RANKS {

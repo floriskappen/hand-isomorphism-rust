@@ -469,14 +469,14 @@ impl HandIndexer {
         index // Return the final hand index
     }
 
-    pub fn hand_unindex(&self, round: usize, mut index: u64, cards: &mut [Card]) -> bool {
+    pub fn hand_unindex(&self, round: usize, mut index: u64, cards: &mut [Card], logging: bool) -> bool {
         if round >= self.rounds || index >= self.round_size[round] {
             return false;
         }
 
-        let mut configuration_idx = 0;
         let mut low: usize = 0;
         let mut high: usize = self.configurations[round] as usize;
+        let mut configuration_idx = 0;
 
 
         while low < high {
@@ -489,7 +489,6 @@ impl HandIndexer {
             }
         }
 
-        
         index -= self.configuration_to_offset[round][configuration_idx];
 
         let mut suit_index = [0; SUITS];
@@ -501,12 +500,10 @@ impl HandIndexer {
                 j += 1;
             }
 
-            // println!("configuration_idx: {} round: {} config0: {} config1: {} config2: {} config3: {}", configuration_idx, round, self.configuration[round][configuration_idx][0], self.configuration[round][configuration_idx][1], self.configuration[round][configuration_idx][2], self.configuration[round][configuration_idx][3]);
             let suit_size = self.configuration_to_suit_size[round][configuration_idx][i] as usize;
             let group_size = NCR_GROUPS[suit_size + j - i - 1][j - i];
             let mut group_index = index % group_size;
             index /= group_size;
-            // println!("suit size: {} group_size: {} group_index: {} index: {}", suit_size, group_size, group_index, index);
     
             while i < j - 1 {
                 low = (
@@ -547,11 +544,10 @@ impl HandIndexer {
     
             suit_index[i] = group_index as usize;
 
-            i+=1;
+            i+=1;            
         }
 
-        // println!("suit index: {:?}", suit_index[0]);
-        
+
         // Initialize location with round_start values
         let mut location = [0u64; MAX_ROUNDS];
         location[..self.rounds].copy_from_slice(&self.round_start[..self.rounds]);
@@ -564,7 +560,6 @@ impl HandIndexer {
                 
                 let n = (self.configuration[round][configuration_idx][i] >> (ROUND_SHIFT * (self.rounds - j - 1) as u32)) & ROUND_MASK as usize;
 
-                
                 let round_size = NCR_RANKS[RANKS - m][n] as usize;
                 m += n;
                 
@@ -575,13 +570,10 @@ impl HandIndexer {
                 let mut rank_set = 0u32;
         
                 for k in 0..n {
-                    let shifted_card = 1 << shifted_cards.trailing_zeros(); // This captures the bit position correctly
-                    // println!("shifted_card {}", shifted_card);
-
+                    let shifted_card = 1 << shifted_cards.trailing_zeros();
                     shifted_cards ^= shifted_card;
-
-                    let card_rank = (31 - shifted_card.leading_zeros()) as u32; // Get the rank from shifted_card
-                    let card = NTH_UNSET[used.count_ones() as usize][card_rank as usize];
+                    let card_rank = shifted_card.trailing_zeros() as u32; // Get the rank from shifted_card
+                    let card = NTH_UNSET[used as usize][card_rank as usize];
 
                     rank_set |= 1 << card; // Update rank_set with this card
                     cards[location[j] as usize + k] = deck_make_card(i as Card, card as Card); // Assign the card to cards array
@@ -589,6 +581,7 @@ impl HandIndexer {
                 }
                 location[j] += n as u64;
                 used |= rank_set;
+
 
             }
         }
