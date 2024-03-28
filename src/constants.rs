@@ -2,6 +2,8 @@ use std::sync::Mutex;
 use lazy_static::lazy_static;
 
 // Constants
+pub const BATCH_SIZE: usize = 1000;
+
 pub const MAX_GROUP_INDEX: usize = 0x100000;
 pub const MAX_CARDS_PER_ROUND: usize = 15;
 pub const MAX_ROUNDS: usize = 8;
