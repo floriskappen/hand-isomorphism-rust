@@ -2,7 +2,7 @@ use crate::constants::{
     CARDS, INDEX_TO_RANK_SET, MAX_ROUNDS, NCR_GROUPS, NCR_RANKS, NTH_UNSET, RANKS, RANK_SET_TO_INDEX, ROUND_MASK, ROUND_SHIFT, SUITS, SUIT_PERMUTATIONS
 };
 use crate::deck::{deck_get_rank, deck_get_suit, Card, deck_make_card};
-use crate::hand_indexer_state::HandIndexerState;
+use crate::hand_indexer_state::{self, HandIndexerState};
 
 #[derive(PartialEq, Clone, Copy)]
 enum Action {
@@ -26,8 +26,6 @@ pub struct HandIndexer {
     configuration: Vec<Vec<[usize; SUITS]>>,
     configuration_to_suit_size: Vec<Vec<[u64; SUITS]>>,
     configuration_to_offset: Vec<Vec<u64>>,
-
-    test_lst: Vec<Vec<u64>>
 }
 
 impl HandIndexer {
@@ -57,8 +55,6 @@ impl HandIndexer {
             configuration: vec![vec![]; rounds],
             configuration_to_suit_size: vec![vec![]; rounds],
             configuration_to_offset: vec![vec![]; rounds],
-
-            test_lst: vec![vec![]]
         };
 
         // Copy the cards_per_round information
@@ -576,7 +572,7 @@ impl HandIndexer {
                     let card = NTH_UNSET[used as usize][card_rank as usize];
 
                     rank_set |= 1 << card; // Update rank_set with this card
-                    cards[location[j] as usize + k] = deck_make_card(i as Card, card as Card); // Assign the card to cards array
+                    cards[location[j] as usize + k] = deck_make_card(i, card as usize); // Assign the card to cards array
 
                 }
                 location[j] += n as u64;
@@ -619,6 +615,38 @@ impl HandIndexer {
     pub fn hand_index_last(&self, cards: &[u8]) -> usize {
         let indices = self.hand_index_all(cards);
         *indices.last().unwrap_or(&0) // Safely return the last element or 0 if not present
+    }
+
+    pub fn hand_to_canonical_representation(&self, cards: &[u8]) -> Vec<u8> {
+        let round: usize;
+        let mut hand_indexer_state = HandIndexerState::new();
+        if cards.len() == 2 {
+            round = 0;
+        } else if cards.len() == 5 {
+            round = 1;
+        } else if cards.len() == 6 {
+            round = 2;
+        } else {
+            round = 3;
+        }
+
+        let mut total_cards = 0;
+        for i in 0..round {
+            self.hand_index_next_round(cards, &mut hand_indexer_state);
+            total_cards += self.cards_per_round[i];
+        }
+
+        println!("{}", total_cards);
+
+        // // Iterate through all configurations for the given round to find a match.
+        // for (config_idx, &config) in self.configuration[round-1].iter().enumerate() {
+        //     // if self.is_matching_configuration(&hand_representation, config, round) {
+        //     //     // Found the matching configuration.
+        //     //     return Some(config_idx);
+        //     // }
+        //     println!("{:?}", config);
+        // }
+        return vec![2]
     }
 }
 
