@@ -2,8 +2,11 @@
 name = "hand-isomorphism-rust"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Floris Kappen kappenfloris@gmail.com"]
 
 [dependencies]
 lazy_static = "1.4.0"
+
+[lib]
+name = "hand_isomorphism_rust" # The name of the library
+path = "src/lib.rs" # Path to the root of your library crate
