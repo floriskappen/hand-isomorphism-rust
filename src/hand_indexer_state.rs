@@ -1,18 +1,4 @@
-use crate::constants::{
-    MAX_GROUP_INDEX,
-    MAX_CARDS_PER_ROUND,
-    ROUND_SHIFT,
-    ROUND_MASK,
-    RANKS,
-    SUITS,
-    NTH_UNSET,
-    EQUAL,
-    NCR_RANKS,
-    NCR_GROUPS,
-    RANK_SET_TO_INDEX,
-    INDEX_TO_RANK_SET,
-    SUIT_PERMUTATIONS,
-};
+use crate::constants::SUITS;
 
 pub struct HandIndexerState {
     pub suit_index: [usize; SUITS],

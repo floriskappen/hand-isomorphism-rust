@@ -2,13 +2,10 @@ use std::sync::Mutex;
 use lazy_static::lazy_static;
 
 // Constants
-pub const BATCH_SIZE: usize = 1000;
-
 pub const MAX_GROUP_INDEX: usize = 0x100000;
-pub const MAX_CARDS_PER_ROUND: usize = 15;
 pub const MAX_ROUNDS: usize = 8;
 pub const ROUND_SHIFT: u32 = 4;
-pub const ROUND_MASK: u32 = 0xf;
+pub const ROUND_MASK: u32 = 15;
 pub const RANKS: usize = 13; // Assuming a standard deck
 pub const SUITS: usize = 4; // Assuming a standard deck
 pub const CARDS: usize = 52; // Assuming a standard deck

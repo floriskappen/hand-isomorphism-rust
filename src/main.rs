@@ -4,7 +4,6 @@ mod hand_indexer_state;
 mod deck;
 mod database;
 
-use constants::BATCH_SIZE;
 use deck::{card_from_string, card_to_string};
 use crate::{deck::{deck_get_rank, deck_get_suit, Card, RANK_TO_CHAR, SUIT_TO_CHAR}, hand_indexer::HandIndexer};
 use database::{create_session, insert_batch, DatabasePokerHand};
@@ -28,14 +27,14 @@ async fn generate_canonical_hands_and_insert_into_database(indexer: &HandIndexer
 
     // Allocate memory for the canonical hands using a Vec
     let mut canonical_hands: Vec<DatabasePokerHand> = Vec::with_capacity(size as usize);
-    let mut canonical_hands_ints: Vec<Vec<u32>> = vec![];
+    let mut canonical_hands_ints: Vec<Vec<Card>> = vec![];
     let mut total: u64 = 0;
 
     let session = create_session().await;
 
     // Generate canonical hands
     for i in 0..size {
-        indexer.hand_unindex(round, i as u64, &mut cards, false);
+        indexer.hand_unindex(round, i as u64, &mut cards);
         let hand = cards[..total_cards as usize].to_vec();
         canonical_hands.push(
             DatabasePokerHand {
@@ -72,18 +71,26 @@ async fn generate_canonical_hands_and_insert_into_database(indexer: &HandIndexer
 
 #[tokio::main]
 async fn main() {
-    // Flop indexer
-    let hand_indexer = HandIndexer::new(2, &[2, 3]).unwrap();
+    // River indexer
+    let hand_indexer = HandIndexer::new(4, &[2, 3, 1, 1]).unwrap();
 
     // println!("{}", card_from_string("Qh".to_string()));
-    println!("{}", card_to_string(41));
-    // // River indexer
-    // let hand_indexer = HandIndexer::new(4, &[2, 3, 1, 1]).unwrap();
+    // println!("{}", card_to_string(41));
+    let cards: Vec<Card> = vec![
+        card_from_string("Kd".to_string()),
+        card_from_string("Ah".to_string()),
+        card_from_string("Qh".to_string()),
+        card_from_string("Jh".to_string()),
+        card_from_string("Tc".to_string()),
+        card_from_string("2c".to_string()),
+        card_from_string("6h".to_string()),
+    ];
 
-    // let result = hand_indexer.hand_to_canonical_representation(&[48,45,12,40,50], 2);
+    let canonical_hand = hand_indexer.hand_to_canonical_representation(cards);
+    let canonical_hand_str = canonical_hand.iter()
+        .map(|&card| card_to_string(card))
+        .collect::<Vec<String>>()
+        .join(",");
 
-    // generate_canonical_hands_and_insert_into_database(&hand_indexer, 0).await;
-
-    // let card = deck_make_card(1, 11); // Example card, King of Hearts
-    // println!("card u32: {} rank: {} suit: {} encoded: {}", card, RANK_TO_CHAR[deck_get_rank(card) as usize], SUIT_TO_CHAR[deck_get_suit(card) as usize], card as u8);
+    println!("CANON: {}", canonical_hand_str);
 }
