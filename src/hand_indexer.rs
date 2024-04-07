@@ -734,7 +734,7 @@ impl HandIndexer {
             i += 1;
         }
 
-        let mut canonicalized_cards = vec![0u32; 7];
+        let mut canonicalized_cards = vec![0u8; 7];
         self.hand_unindex(round, index, &mut canonicalized_cards);
 
         return canonicalized_cards[..cards.len()].to_vec();

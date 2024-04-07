@@ -1,6 +1,6 @@
 
 // Define card as a type alias for u32 for better readability.
-pub type Card = u32;
+pub type Card = u8;
 
 // Mapping arrays could be implemented in Rust using slices or arrays,
 // but for simplicity, we'll just define functions that mimic the C constants behavior.
