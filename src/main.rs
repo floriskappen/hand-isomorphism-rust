@@ -11,20 +11,23 @@ fn main() {
     let hand_indexer = HandIndexer::new(4, &[2, 3, 1, 1]).unwrap();
 
     let cards: Vec<Card> = vec![
-        card_from_string("Kd".to_string()),
-        card_from_string("Ah".to_string()),
-        card_from_string("Qh".to_string()),
-        card_from_string("Jh".to_string()),
-        card_from_string("Tc".to_string()),
-        card_from_string("2c".to_string()),
-        card_from_string("6h".to_string()),
+        card_from_string("Kh".to_string()),
+        card_from_string("As".to_string()),
+        card_from_string("Js".to_string()),
+        card_from_string("Qs".to_string()),
+        card_from_string("Td".to_string()),
+        card_from_string("2d".to_string()),
+        card_from_string("6c".to_string()),
     ];
 
-    let canonical_hand = hand_indexer.hand_to_canonical_representation(cards);
+    let canonical_hand = hand_indexer.hand_to_canonical_representation(&cards);
+    let index = hand_indexer.hand_to_index(&cards);
+
     let canonical_hand_str = canonical_hand.iter()
         .map(|&card| card_to_string(card))
         .collect::<Vec<String>>()
         .join(",");
 
     println!("CANON: {}", canonical_hand_str);
+    println!("INDEX: {}", index);
 }

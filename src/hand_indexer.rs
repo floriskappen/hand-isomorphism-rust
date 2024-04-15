@@ -679,7 +679,7 @@ impl HandIndexer {
         *indices.last().unwrap_or(&0) // Safely return the last element or 0 if not present
     }
 
-    pub fn hand_to_canonical_representation(&self, cards: Vec<Card>) -> Vec<Card> {
+    pub fn hand_to_canonical_representation(&self, cards: &Vec<Card>) -> Vec<Card> {
         let round: usize;
         let mut state = HandIndexerState::new();
         if cards.len() == 2 {
@@ -738,5 +738,63 @@ impl HandIndexer {
         self.hand_unindex(round, index, &mut canonicalized_cards);
 
         return canonicalized_cards[..cards.len()].to_vec();
+    }
+
+    pub fn hand_to_index(&self, cards: &Vec<Card>) -> u32 {
+        let round: usize;
+        let mut state = HandIndexerState::new();
+        if cards.len() == 2 {
+            round = 0;
+        } else if cards.len() == 5 {
+            round = 1;
+        } else if cards.len() == 6 {
+            round = 2;
+        } else {
+            round = 3;
+        }
+
+        let mut total_cards = 0;
+        for i in 0..=round {
+            self.hand_index_next_round(&cards[total_cards..], &mut state);
+            total_cards += self.cards_per_round[i] as usize;
+        }
+
+        let configuration = self.permutation_to_configuration[round][state.permutation_index as usize];
+        let pi_index = self.permutation_to_pi[round][state.permutation_index as usize] as usize;
+        let offset = self.configuration_to_offset[round][configuration as usize];
+
+        let suit_permutations = SUIT_PERMUTATIONS.lock().unwrap();
+        let pi = &suit_permutations[pi_index as usize];
+
+        let mut suit_index = [0; SUITS];
+        let mut suit_multiplier = [0; SUITS];
+        for i in 0..SUITS {
+            suit_index[i] = state.suit_index[pi[i] as usize];
+            suit_multiplier[i] = state.suit_multiplier[pi[i] as usize];
+        }
+
+        let mut index = offset;
+        let mut multiplier = 1;
+        let mut i = 0;
+
+        while i < SUITS {
+            let mut j = i + 1;
+            while j < SUITS && self.configuration[round][configuration as usize][j] == self.configuration[round][configuration as usize][i] {
+                j += 1;
+            }
+            let suit_size = self.configuration_to_suit_size[round][configuration as usize][i] as usize;
+            let group_size = NCR_GROUPS[suit_size + j - i - 1][j - i];
+            let mut group_index = 0;
+            while i < j - 1 {
+                group_index += NCR_GROUPS[suit_index[i] as usize + j - i - 1][j - i];
+                i += 1;
+            }
+            group_index += suit_index[i] as u64;
+            index += multiplier * group_index;
+            multiplier *= group_size;
+            i += 1;
+        }
+
+        return index as u32;
     }
 }
