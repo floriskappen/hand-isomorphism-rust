@@ -269,7 +269,6 @@ impl HandIndexer {
                 high = mid;
             } else if compare == 0 {
                 low = mid;
-                high = mid;
                 break; // Since low and high are set to the same value, we can exit the loop.
             } else {
                 low = mid + 1;
@@ -317,7 +316,7 @@ impl HandIndexer {
                 Action::TabulateConfigurations => {
                     self.tabulate_configurations(round, configuration);
                 }
-                default => {}
+                _default => {}
             }
 
             if round + 1 < rounds {
@@ -373,7 +372,7 @@ impl HandIndexer {
                 Action::TabulatePermutations => {
                     self.tabulate_permutations(round, count);
                 }
-                default => {}
+                _default => {}
             }
 
             if round + 1 < rounds {
@@ -483,8 +482,8 @@ impl HandIndexer {
         
         let mut i = 0;
         while i < SUITS {
-            let mut part = 0;
-            let mut size = 0;
+            let part ;
+            let size;
         
             if i + 1 < SUITS && EQUAL[equal_index as usize][i + 1] {
                 if i + 2 < SUITS && EQUAL[equal_index as usize][i + 2] {
