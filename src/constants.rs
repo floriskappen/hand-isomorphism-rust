@@ -87,7 +87,7 @@ lazy_static! {
         }
         index_to_rank_set
     };
-    pub static ref SUIT_PERMUTATIONS: Mutex<Vec<Vec<u32>>> = Mutex::new({
+    pub static ref SUIT_PERMUTATIONS: Vec<Vec<u32>> = {
         let num_permutations = factorial(SUITS);
         let mut permutations = vec![vec![0; SUITS]; num_permutations];
         for i in 0..num_permutations {
@@ -102,7 +102,7 @@ lazy_static! {
             }
         }
         permutations
-    });
+    };
 }
 
 // Utility functions, like factorial, used in initialization

@@ -466,8 +466,7 @@ impl HandIndexer {
         let equal_index = self.configuration_to_equal[round][configuration as usize];
         let offset = self.configuration_to_offset[round][configuration as usize];
 
-        let suit_permutations = SUIT_PERMUTATIONS.lock().unwrap();
-        let pi = &suit_permutations[pi_index as usize];
+        let pi = &SUIT_PERMUTATIONS[pi_index as usize];
 
         let mut suit_index = vec![0; SUITS];
         let mut suit_multiplier = [0; SUITS];
@@ -702,8 +701,7 @@ impl HandIndexer {
         let pi_index = self.permutation_to_pi[round][state.permutation_index as usize] as usize;
         let offset = self.configuration_to_offset[round][configuration as usize];
 
-        let suit_permutations = SUIT_PERMUTATIONS.lock().unwrap();
-        let pi = &suit_permutations[pi_index as usize];
+        let pi = &SUIT_PERMUTATIONS[pi_index as usize];
 
         let mut suit_index = [0; SUITS];
         let mut suit_multiplier = [0; SUITS];
@@ -763,8 +761,7 @@ impl HandIndexer {
         let pi_index = self.permutation_to_pi[round][state.permutation_index as usize] as usize;
         let offset = self.configuration_to_offset[round][configuration as usize];
 
-        let suit_permutations = SUIT_PERMUTATIONS.lock().unwrap();
-        let pi = &suit_permutations[pi_index as usize];
+        let pi = &SUIT_PERMUTATIONS[pi_index as usize];
 
         let mut suit_index = [0; SUITS];
         let mut suit_multiplier = [0; SUITS];
