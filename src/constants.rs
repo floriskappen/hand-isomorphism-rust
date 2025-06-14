@@ -104,7 +104,6 @@ lazy_static! {
     };
 }
 
-// Utility functions, like factorial, used in initialization
 fn factorial(n: usize) -> usize {
     (1..=n).product()
 }

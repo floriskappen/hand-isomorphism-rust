@@ -3,7 +3,6 @@ pub type Card = u8;
 
 // Mapping arrays could be implemented in Rust using slices or arrays,
 // but for simplicity, we'll just define functions that mimic the C constants behavior.
-// Assuming you would like to convert ranks and suits to characters.
 
 // Returns the character representation of a card's rank.
 pub const RANK_TO_CHAR: &[char] = &['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
