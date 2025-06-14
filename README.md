@@ -1,6 +1,7 @@
 # Poker Hand Isomorphism (Rust implementation)
 
 Original author: Kevin Waugh
+
 Original code: https://github.com/kdub0/hand-isomorphism
 
 Kevin Waugh's paper which this code is based on: K. Waugh, 2013. A Fast and Optimal Hand Isomorphism Algorithm. In the Second Computer Poker and Imperfect Information Symposium at AAAI
